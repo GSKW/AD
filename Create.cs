@@ -4,6 +4,9 @@ using System.IO;
 using System;
 using System.Globalization;
 using System.Threading;
+using UnityEditor;
+using UnityEditor.Formats.Fbx.Exporter;
+using System.Collections;
 
 
 [RequireComponent(typeof(MeshFilter))]
@@ -16,21 +19,23 @@ public class Create: MonoBehaviour
 
     // Объекты
     public GameObject MainCamera;
+    public GameObject s_window;
+    public GameObject l_window;
     public GameObject window;
+
+    public GameObject newParent;
+    public GameObject oldParent;
+    public GameObject clsParent;
+
 
     // Материалы
     public Material oldWallMaterial;
     public Material newWallMaterial;
     public Material classicWallMaterial;
 
-    // Словарь
-//    Dictionary<int, Material> dict = new Dictionary<int, Material>()
-//    {
-//        [1] = newWallMaterial,
-//        [2] = oldWallMaterial,
-//        [3] =
-//    };
 
+    public string[] list4;
+    public string[] list5;
 
     // Мебель
     public GameObject woodenNightStand;
@@ -52,11 +57,21 @@ public class Create: MonoBehaviour
     public GameObject oldCloset;
 
     // Путь к файлам
-    string path1 = "/Users/bolevard/Auto_desig/auto_home_design/point.csv";
-    string path2 = "/Users/bolevard/Auto_desig/auto_home_design/furniture.csv";
-    string path3 = "/Users/bolevard/Auto_desig/auto_home_design/models.csv";
+    string path1 = "auto_home_design/point.csv";
+    string path2 = "auto_home_design/furniture.csv";
+    string path3 = "auto_home_design/models.csv";
+    string path4 = "auto_home_design/save_models.csv";
+    string path5 = "auto_home_design/features.csv";
 
-    //--------------------------------------------
+    public float wall_scale = 4f; // max 4 / min 2/ default 4
+    public float win_scale = 4f; // max 8 / min 1/ default 4
+    public int win_type = 1;
+
+    public GameObject[,] dict_;
+
+
+
+
 
 	// Движение объекта
 	void MoveRect(GameObject wall, float x, float y, float z)
@@ -64,6 +79,14 @@ public class Create: MonoBehaviour
 		Vector3 temp = new Vector3(x, y, z);
 		wall.transform.position += temp;
 	}
+
+	public void ExportGameObjects(GameObject objects, string name)
+    {
+        string filePathNew = Path.Combine("auto_home_design/", name+".fbx");
+        ModelExporter.ExportObject(filePathNew, objects);
+//        Console.WriteLine("auto_home_design/", name+".fbx");
+    }
+
 	
 	// Масштабирование объекта
 	void ScaleRect(GameObject wall, float x, float y, float z)
@@ -110,16 +133,37 @@ public class Create: MonoBehaviour
     //---------------------
 
     // Построение стены
-    void CreateWall(float X1, float Y1, float X2, float Y2, string wallType, Material wallMat)
+    void CreateWall(float X1, float Y1, float X2, float Y2, string wallType, Material wallMat, int model)
     {
+
+        Debug.Log(win_type);
+        Debug.Log(win_scale);
+        Debug.Log(wall_scale);
+		float coef = 0.45f;
+
+		float add_wall_scale = (float) ((wall_scale - (coef * win_scale)) / 2);
+		float add_wall_down_y_pos = (float) (add_wall_scale / 2);
+		float add_wall_up_y_pos = (float) (add_wall_scale * 1.5 + (coef * win_scale));
+
+		float window_pos_y = (float) ((coef * win_scale) / 2 + add_wall_down_y_pos * 2);
+
 		// Стена
 		if (wallType == "wall")
 		{
 			GameObject wall1 = GameObject.CreatePrimitive(PrimitiveType.Cube);
 			wall1.GetComponent<Renderer>().material = wallMat;
-			MoveRect(wall1, GetCordsX(X1, X2), 0.25f, GetCordsY(Y1, Y2));
-			ScaleRect(wall1, ScaleX(X1, Y1, X2, Y2), 2.5f, (float)0.1);
+			MoveRect(wall1, GetCordsX(X1, X2), (float) wall_scale/2, GetCordsY(Y1, Y2));
+			ScaleRect(wall1, ScaleX(X1, Y1, X2, Y2), wall_scale, (float)0.1); //
 			RotateRect(wall1, 0, Angle(X1, Y1, X2, Y2), 0);
+			if (model == 1){
+			    wall1.transform.parent = newParent.gameObject.transform;
+			}
+			else if (model == 2){
+			    wall1.transform.parent = oldParent.gameObject.transform;
+			}
+			else {
+			    wall1.transform.parent = clsParent.gameObject.transform;
+			}
 		}
 
 		// Окно
@@ -128,114 +172,116 @@ public class Create: MonoBehaviour
 			GameObject wall1 = GameObject.CreatePrimitive(PrimitiveType.Cube);
             wall1.GetComponent<Renderer>().material = wallMat;
 
-			MoveRect(wall1, GetCordsX(X1, X2), -0.5f, GetCordsY(Y1, Y2));
-			ScaleRect(wall1, ScaleX(X1, Y1, X2, Y2), 1, (float)0.1);
+			MoveRect(wall1, GetCordsX(X1, X2), add_wall_down_y_pos, GetCordsY(Y1, Y2)); // -0.5
+			ScaleRect(wall1, ScaleX(X1, Y1, X2, Y2),add_wall_scale, (float)0.1);
 			RotateRect(wall1, 0, Angle(X1, Y1, X2, Y2), 0);
+
+			GameObject wall2 = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wall2.GetComponent<Renderer>().material = wallMat;
+
+			MoveRect(wall2, GetCordsX(X1, X2), add_wall_up_y_pos, GetCordsY(Y1, Y2)); // -0.5
+			ScaleRect(wall2, ScaleX(X1, Y1, X2, Y2), add_wall_scale, (float)0.1);
+			RotateRect(wall2, 0, Angle(X1, Y1, X2, Y2), 0);
 
 			GameObject wnd1 = Instantiate(window, new Vector3(0,0,0), Quaternion.identity);
 
-			MoveRect(wnd1, GetCordsX(X1, X2), 0.75f, GetCordsY(Y1, Y2));
-			ScaleRect(wnd1, ScaleX(X1, Y1, X2, Y2), 3.4f, ScaleX(X1, Y1, X2, Y2)*1.3f);
+			MoveRect(wnd1, GetCordsX(X1, X2), window_pos_y, GetCordsY(Y1, Y2));
+			ScaleRect(wnd1, ScaleX(X1, Y1, X2, Y2), win_scale, ScaleX(X1, Y1, X2, Y2)*1.3f);
 			RotateRect(wnd1, 0, 90-Angle(X1, Y1, X2, Y2), 0);
 
 			GameObject wnd2 = Instantiate(window, new Vector3(0,0,0), Quaternion.identity);
 
-			MoveRect(wnd2, GetCordsX(X1, X2), 0.75f, GetCordsY(Y1, Y2));
-			ScaleRect(wnd2, ScaleX(X1, Y1, X2, Y2), 3.4f, ScaleX(X1, Y1, X2, Y2)*1.3f);
+			MoveRect(wnd2, GetCordsX(X1, X2), window_pos_y, GetCordsY(Y1, Y2));
+			ScaleRect(wnd2, ScaleX(X1, Y1, X2, Y2), win_scale, ScaleX(X1, Y1, X2, Y2)*1.3f);
 			RotateRect(wnd2, 0, 90-Angle(X1, Y1, X2, Y2), 180);
+
+			if (model == 1){
+			    wall1.transform.parent = newParent.gameObject.transform;
+			    wall2.transform.parent = newParent.gameObject.transform;
+			    wnd1.transform.parent = newParent.gameObject.transform;
+			    wnd2.transform.parent = newParent.gameObject.transform;
+			}
+			else if (model == 2){
+			    wall1.transform.parent = oldParent.gameObject.transform;
+			    wall2.transform.parent = oldParent.gameObject.transform;
+			    wnd1.transform.parent = oldParent.gameObject.transform;
+			    wnd2.transform.parent = oldParent.gameObject.transform;
+			}
+			else {
+			    wall1.transform.parent = clsParent.gameObject.transform;
+			    wall2.transform.parent = clsParent.gameObject.transform;
+			    wnd1.transform.parent = clsParent.gameObject.transform;
+			    wnd2.transform.parent = clsParent.gameObject.transform;
+			}
 		}
     }
     // (x, z)
     // Расстановка мебели
     void CreateFurniture(float X1, float Z1, string furnType, int model)
     {
-        if (model == 3){
-            if(furnType == "1"){
-                GameObject Chair = Instantiate(woodenChair, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Chair, X1 * 10, -1f, Z1 * 10);
-            }
-            if(furnType == "2"){
-                GameObject Table = Instantiate(woodenTable, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Table, X1 * 10-0.2f, -1f, Z1 * 10+0.1f);
-            }
-            if(furnType == "3"){
-                GameObject Table = Instantiate(woodenNightStand, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Table, X1 * 10, -0.8f, Z1 * 10);
-            }
-            if(furnType == "4"){
-                GameObject Bed = Instantiate(woodenBed, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Bed, X1 * 10, -0.6f, Z1 * 10);
-                RotateRect(Bed, -90f, 0, 0);
-            }
-
-            if(furnType == "5"){
-                GameObject Bed = Instantiate(woodenCloset, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Bed, X1 * 10, -0.9f, Z1 * 10);
-
-            }
-        }
-        else if (model == 1){
-            if(furnType == "1"){
-                GameObject Chair = Instantiate(newChair, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Chair, X1 * 10, -1f, Z1 * 10+0.3f);
-            }
-            if(furnType == "2"){
-                GameObject Table = Instantiate(newTable, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Table, X1 * 10-0.2f, -1f, Z1 * 10+0.1f);
-            }
-            if(furnType == "3"){
-                GameObject Table = Instantiate(woodenNightStand, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Table, X1 * 10, -0.8f, Z1 * 10);
-            }
-            if(furnType == "4"){
-                GameObject Bed = Instantiate(newBed, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Bed, X1 * 10, -0.5f, Z1 * 10);
-                RotateRect(Bed, -90f, 0, 0);
-            }
-            if(furnType == "5"){
-                GameObject Bed = Instantiate(newCloset, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Bed, X1 * 10, -0.9f, Z1 * 10);
-                RotateRect(Bed, 0, 0, 0);
-            }
-        }
-        else if (model == 2){
-            if(furnType == "1"){
-                GameObject Chair = Instantiate(oldChair, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Chair, X1 * 10, -1f, Z1 * 10);
-            }
-            if(furnType == "2"){
-                GameObject Table = Instantiate(oldTable, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Table, X1 * 10-0.2f, 0.3f, Z1 * 10+0.1f);
-            }
-            if(furnType == "3"){
-                GameObject Table = Instantiate(woodenNightStand, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Table, X1 * 10, -0.8f, Z1 * 10);
-            }
-            if(furnType == "4"){
-                GameObject Bed = Instantiate(oldBed, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Bed, X1 * 10-0.65f, -0.7f, Z1 * 10);
-                RotateRect(Bed, -90f, 0, 0);
-            }
-            if(furnType == "5"){
-                GameObject Bed = Instantiate(oldCloset, new Vector3(0, 0, 0), Quaternion.identity);
-                MoveRect(Bed, X1 * 10, -1f, Z1 * 10);
-                RotateRect(Bed, -90, 180, 180);
-            }
-        }
+        GameObject Chair = Instantiate(dict_[model-1, Int16.Parse(furnType)-1], new Vector3(0, 0, 0), Quaternion.identity);
+        MoveRect(Chair, X1 * 10, 0, Z1 * 10);
+        Chair.transform.parent = clsParent.gameObject.transform;
     }
 
 	// Главная функция
 	void Start()
 	{
+
+        dict_ = new GameObject[3,5];
+
+        dict_[0, 0] = newChair;
+        dict_[0, 1] = newTable;
+        dict_[0, 2] = woodenNightStand;
+        dict_[0, 3] = newBed;
+        dict_[0, 4] = newCloset;
+
+        dict_[1, 0] = oldChair;
+        dict_[1, 1] = oldTable;
+        dict_[1, 2] = woodenNightStand;
+        dict_[1, 3] = oldBed;
+        dict_[1, 4] = oldCloset;
+
+        dict_[2, 0] = woodenChair;
+        dict_[2, 1] = woodenTable;
+        dict_[2, 2] = woodenNightStand;
+        dict_[2, 3] = woodenBed;
+        dict_[2, 4] = woodenCloset;
+
+		newParent = new GameObject("New");
+		oldParent = new GameObject("Old");
+		clsParent = new GameObject("Classic");
+
 		// Два списка с кординатами точек
 		string[] list1 = File.ReadAllLines(path1);
 		string[] list2 = File.ReadAllLines(path2);
         string[] list3 = File.ReadAllLines(path3);
 
+        list4 = File.ReadAllLines(path4);
+        list5 = File.ReadAllLines(path5);
+
+
         // Переменные с номерами моделей
         int model1 = int.Parse(list3[0].Split(',')[0], CultureInfo.InvariantCulture.NumberFormat);
         int model2 = int.Parse(list3[0].Split(',')[1], CultureInfo.InvariantCulture.NumberFormat);
         int model3 = int.Parse(list3[0].Split(',')[2], CultureInfo.InvariantCulture.NumberFormat);
+
+        wall_scale = float.Parse(list5[0].Split(',')[0], CultureInfo.InvariantCulture.NumberFormat);
+        win_scale = float.Parse(list5[0].Split(',')[1], CultureInfo.InvariantCulture.NumberFormat) * 4;
+        win_type = int.Parse(list5[0].Split(',')[2], CultureInfo.InvariantCulture.NumberFormat);
+
+
+
+        if (list4.Length > 0){
+            list4 = list4[0].Split(',');
+        }
+
+        if (win_type == 1) {
+            window = l_window;
+        }
+        else {
+            window = s_window;
+        }
 
 		Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
@@ -253,33 +299,33 @@ public class Create: MonoBehaviour
 
             // Построение
 			if(model1 == 1){
-			    CreateWall(X1 + 1.5f, Y1, X2 + 1.5f, Y2, wallType, newWallMaterial);
+			    CreateWall(X1 + 1.5f, Y1, X2 + 1.5f, Y2, wallType, newWallMaterial, 1);
 			    }
 			else if (model2 == 1){
-			    CreateWall(X1, Y1, X2, Y2, wallType, newWallMaterial);
+			    CreateWall(X1, Y1, X2, Y2, wallType, newWallMaterial, 1);
 			}
 			else{
-			    CreateWall(X1 - 1.5f, Y1, X2 - 1.5f, Y2, wallType, newWallMaterial);
+			    CreateWall(X1 - 1.5f, Y1, X2 - 1.5f, Y2, wallType, newWallMaterial, 1);
 			}
 
 			if(model1 == 2){
-			    CreateWall(X1 + 1.5f, Y1, X2 + 1.5f, Y2, wallType, oldWallMaterial);
+			    CreateWall(X1 + 1.5f, Y1, X2 + 1.5f, Y2, wallType, oldWallMaterial, 2);
 			    }
 			else if (model2 == 2){
-			    CreateWall(X1, Y1, X2, Y2, wallType, oldWallMaterial);
+			    CreateWall(X1, Y1, X2, Y2, wallType, oldWallMaterial, 2);
 			}
 			else{
-			    CreateWall(X1 - 1.5f, Y1, X2 - 1.5f, Y2, wallType, oldWallMaterial);
+			    CreateWall(X1 - 1.5f, Y1, X2 - 1.5f, Y2, wallType, oldWallMaterial, 2);
 			}
 
 			if(model1 == 3){
-			    CreateWall(X1 + 1.5f, Y1, X2 + 1.5f, Y2, wallType, classicWallMaterial);
+			    CreateWall(X1 + 1.5f, Y1, X2 + 1.5f, Y2, wallType, classicWallMaterial, 3);
 			    }
 			else if (model2 == 3){
-			    CreateWall(X1, Y1, X2, Y2, wallType, classicWallMaterial);
+			    CreateWall(X1, Y1, X2, Y2, wallType, classicWallMaterial, 3);
 			}
 			else{
-			    CreateWall(X1 - 1.5f, Y1, X2 - 1.5f, Y2, wallType, classicWallMaterial);
+			    CreateWall(X1 - 1.5f, Y1, X2 - 1.5f, Y2, wallType, classicWallMaterial, 3);
 			}
 		}
 
@@ -296,5 +342,18 @@ public class Create: MonoBehaviour
 			CreateFurniture(X1, Y1, furnType, model2);
 			CreateFurniture(X1 - 1.5f, Y1, furnType, model3);
 		}
+
+		for (int i = 0; i < list4.Length; i++){
+            if (list4[i] == "tick_new"){
+                ExportGameObjects(newParent, "new");
+            }
+            else if (list4[i] == "tick_cls"){
+                ExportGameObjects(clsParent, "cls");
+            }
+            else if (list4[i] == "tick_old"){
+                ExportGameObjects(oldParent, "old");
+            }
+        }
+
 	}
 }

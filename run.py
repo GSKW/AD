@@ -3,12 +3,14 @@
 import csv
 import subprocess
 
+
 #
 #pip
 #
 
 import window1new
 import window2new
+import window3new
 
 import prediction_of_furniture
 
@@ -16,7 +18,14 @@ import prediction_of_furniture
 def main():
     """ Главная функция """
 
-    # Первое окно
+    # Нулевое окно
+    win0 = window3new.Main()
+    win0.frame()
+    while not win0.frame():
+        pass
+
+
+    # # Первое окно
     win1 = window1new.Main()
     win1.frame()
     classifier = prediction_of_furniture.Classifier()
@@ -37,7 +46,7 @@ def main():
 
     sorted_models = classifier.predict_sorted_models(words)
     with open('models.csv', 'w', encoding='utf-8') as file:
-       file.write(','.join([str(model) for model in sorted_models]))
+        file.write(','.join([str(model) for model in sorted_models]))
 
     subprocess.run(['open', '-n', '../bin2.app'])
 

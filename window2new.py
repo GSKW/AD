@@ -56,12 +56,13 @@ class Main:
         self.closet = pg.transform.scale(pg.image.load('images/closet.png'), (60, 60))
         self.closet.convert()
 
+        self.tick = pg.transform.scale(pg.image.load('images/tick.png'), (60, 60))
+        self.tick.convert()
+
 
         # Таймер
         self.clock = pg.time.Clock()
 
-        # Флаг вкладки
-        self.pg = True
 
         # Количество кадров в секунду
         self.fps = 30
@@ -81,8 +82,14 @@ class Main:
             'hovered': 'lightskyblue3',
         }
 
+        self.exp = {
+            'tick_new': False,
+            'tick_old': False,
+            'tick_cls': False,
+        }
+
         # Имена изменяемых кнопок
-        self.names = ['wall', 'door', 'window', 'empty']
+        self.names = ['wall', 'door', 'window'] #, 'empty']
 
         # Словарь с последними изменениями
         self.last_change = []
@@ -91,6 +98,9 @@ class Main:
         self.dots = {}
         self.dot = (0,0)
         self.dot_to_dot = False
+
+        self.last_click = (0, 0)
+        self.st_l, self.fin_l = (0, 0), (0, 0)
 
         # Массив изображений
         self.images = {}
@@ -104,21 +114,26 @@ class Main:
             'wall': pg.Rect(self.width-710, 150, 70, 70),
             'window': pg.Rect(self.width-710, 300, 70, 70),
             'door': pg.Rect(self.width-710, 450, 70, 70),
-            'empty': pg.Rect(self.width - 710, 600, 70, 70),
+            # 'empty': pg.Rect(self.width - 710, 600, 70, 70),
 
             'back': pg.Rect(self.width-310, 450, 70, 70),
             'dtd': pg.Rect(self.width-310, 350, 70, 70),
 
             'generate': pg.Rect(self.width-275, 600, 200, 70),
 
-            'pg1': pg.Rect(self.width - 325, 150, 300, 70),
             'pg2': pg.Rect(self.width - 325, 50, 300, 70),
+            'pg1': pg.Rect(self.width - 325, 150, 300, 70),
+            'pg3': pg.Rect(self.width - 325, 250, 300, 70),
 
             '1': pg.Rect(self.width-710, 20, 70, 70),
             '2': pg.Rect(self.width-710, 150, 70, 70),
             '3': pg.Rect(self.width-710, 300, 70, 70),
             '4': pg.Rect(self.width-710, 450, 70, 70),
             '5': pg.Rect(self.width-710, 600, 70, 70),
+
+            'tick_new': pg.Rect(self.width - 710, 150, 70, 70),
+            'tick_old': pg.Rect(self.width - 710, 300, 70, 70),
+            'tick_cls': pg.Rect(self.width - 710, 450, 70, 70),
         }
 
         # Словарь активности кнопок
@@ -130,6 +145,8 @@ class Main:
             '5': False,
         }
         self.walls = True
+
+        self.current_page = 'pg1'
 
         # Словарь цветов изображаемой мебели
         self.furn_colors = {
@@ -160,6 +177,8 @@ class Main:
                             self.screen.get_size()[0] / 3 * self.multiple,
                             self.screen.get_size()[1])
         }
+
+
 
         # Массив координат точек
         self.points = []
@@ -196,6 +215,100 @@ class Main:
         text_rect.midtop = (x, y)
         surf.blit(text_surface, text_rect)
 
+
+    def page_1(self):
+        pg.draw.rect(self.screen, 'white', self.buttons['clear'], 0)
+        pg.draw.rect(self.screen, 'green', self.buttons['door'], 0)
+        pg.draw.rect(self.screen, self.colors['not_hovered'], self.buttons['wall'], 0)
+        pg.draw.rect(self.screen, 'red', self.buttons['window'], 0)
+        # pg.draw.rect(self.screen, self.colors['hovered'], self.buttons['empty'], 0)
+
+        # Изображения
+        self.screen.blit(self.clear, (680, 10))
+        self.screen.blit(self.wall, (690, 150))
+        self.screen.blit(self.window, (685, 295))
+        self.screen.blit(self.door, (690, 450))
+        # self.screen.blit(self.empty, (692, 602))
+
+        self.n = 20
+        for square in range(5):
+            pg.draw.rect(self.screen, 'white', pg.Rect(690, self.n, 70, 70), 4)
+            if square < 1:
+                self.n += 130
+            else:
+                self.n += 150
+
+        # Активность кнопок стен
+        if self.brush in self.names:
+            pg.draw.rect(self.screen, 'yellow', self.buttons[self.brush], 4)
+        else:
+            pg.draw.rect(self.screen, 'yellow', self.buttons['wall'], 4)
+
+        # Текст
+        Main.draw_text(self, self.screen, 'Clear all', 40, self.width - 525, 33)
+        Main.draw_text(self, self.screen, 'Wall', 40, self.width - 525, 165)
+        Main.draw_text(self, self.screen, 'Window', 40, self.width - 525, 315)
+        Main.draw_text(self, self.screen, 'Door', 40, self.width - 525, 463)
+        Main.draw_text(self, self.screen, 'Empty', 40, self.width - 525, 615)
+        pass
+
+
+    def page_2(self):
+        # Текст
+        Main.draw_text(self, self.screen, 'Chair', 40, self.width - 525, 33)
+        Main.draw_text(self, self.screen, 'Table', 40, self.width - 525, 165)
+        Main.draw_text(self, self.screen, 'Nightstand', 40, self.width - 525, 315)
+        Main.draw_text(self, self.screen, 'Bed', 40, self.width - 525, 463)
+        Main.draw_text(self, self.screen, 'Closet', 40, self.width - 525, 613)
+
+        # Кнопки и их активность
+        for name in self.buttons:
+            if name in self.buttons_active.keys():
+                if self.buttons_active[name]:
+                    pg.draw.rect(self.screen, 'yellow', self.buttons[name], 0)
+                else:
+                    pg.draw.rect(self.screen, 'pink', self.buttons[name], 0)
+
+        # Мебель на холсте
+        for rect, active in self.buttons_active.items():
+            if active:
+                self.x, self.y = self.furn_size[rect]
+                pg.draw.rect(self.screen, self.furn_colors[rect],
+                             pg.Rect(pg.mouse.get_pos()[0] - self.x / 2, pg.mouse.get_pos()[1] - self.y / 2,
+                                     self.x, self.y), 3)
+
+        self.screen.blit(self.chair, (688, 19))
+        self.screen.blit(self.table, (691.5, 143))
+        self.screen.blit(self.night, (692, 303))
+        self.screen.blit(self.bed, (677, 435))
+        self.screen.blit(self.closet, (695, 605))
+
+        self.n = 20
+        for square in range(5):
+            pg.draw.rect(self.screen, 'white', pg.Rect(690, self.n, 70, 70), 4)
+            if square < 1:
+                self.n += 130
+            else:
+                self.n += 150
+        pass
+
+    def page_3(self):
+        Main.draw_text(self, self.screen, 'Export', 40, self.width - 555, 33)
+
+        for name, button in self.buttons.items():
+            if name[:4] == 'tick':
+                if self.exp[name]:
+                    pg.draw.rect(self.screen, 'white', button, 0)
+                    pg.draw.rect(self.screen, 'gray', button, 4)
+                    self.screen.blit(self.tick, (button[0]+5, button[1]+5))
+                else:
+                    pg.draw.rect(self.screen, 'white', button, 0)
+                    pg.draw.rect(self.screen, 'gray', button, 4)
+
+        Main.draw_text(self, self.screen, 'New', 40, self.width - 555, 165)
+        Main.draw_text(self, self.screen, 'Old', 40, self.width - 555, 320)
+        Main.draw_text(self, self.screen, 'Classic', 40, self.width - 555, 470)
+
     def frame(self):
         """Отрисовка второго окна"""
 
@@ -226,6 +339,12 @@ class Main:
                 for name, square in self.dots.items():
                     if pg.Rect(square[0], square[1], 32.62, 32.62).collidepoint(i.pos):
                         self.dot = (square[0]+32.62/2, square[1]+32.62/2)
+                    if self.canvas["rect"].collidepoint(i.pos) and len(self.points) > 0:
+                        self.st_l = (self.points[-1][0] * self.canvas["can"].get_size()[1], self.points[-1][1] * self.canvas["can"].get_size()[1])
+                        self.fin_l = (i.pos[0], i.pos[1])
+                        pg.draw.line(self.canvas["can"], 'black', (self.points[-1][0], self.points[-1][1]),
+                                     (i.pos[0]/self.canvas["can"].get_size()[0], i.pos[1]/self.canvas["can"].get_size()[1]), 4)
+
 
             # Нажатие кнопок мыши
             elif i.type == pg.MOUSEBUTTONDOWN:
@@ -236,47 +355,56 @@ class Main:
                     # Коллизия с курсором
                     if self.buttons[name].collidepoint(i.pos):
 
-                        # Вкладки
-                        if name == 'pg1':
-                            self.pg = True
-                        if name == 'pg2':
-                            self.pg = False
+                        if name[:4] == 'tick':
+                            if self.exp[name]:
+                                self.exp[name] = False
+                            else:
+                                self.exp[name] = True
+
+                        match name:
+                            case 'pg1':
+                                self.current_page = 'pg1'
+                            case 'pg2':
+                                self.current_page = 'pg2'
+                            case 'pg3':
+                                self.current_page = 'pg3'
 
                         # Очистка
-                        if name == 'clear':
-                            if self.pg:
-                                self.canvas['can'].fill(self.colors['white'])
-                                self.points.clear()
-                                self.dictionary.clear()
-                                self.furniture_points.clear()
+                            case 'clear':
+                                if self.current_page == 'pg1':
+                                    self.canvas['can'].fill(self.colors['white'])
+                                    self.points.clear()
+                                    self.dictionary.clear()
+                                    self.furniture_points.clear()
 
                         # Построение по точкам
-                        if name == 'dtd':
-                            self.brush = 'wall'
-                            if self.dot_to_dot:
-                                self.dot_to_dot = False
-                            else:
-                                self.dot_to_dot = True
+                            case 'dtd':
+                                self.brush = 'wall'
+                                if self.dot_to_dot:
+                                    self.dot_to_dot = False
+                                else:
+                                    self.dot_to_dot = True
 
                         # Кнопка назад
-                        if name == 'back':
-                            if len(self.last_change) > 0:
-                                if self.last_change[-1] == 1:
-                                    if len(self.points) > 0:
-                                        self.points.pop(-1)
-                                if self.last_change[-1] == 0:
-                                    if len(self.dictionary) > 0:
-                                        self.dictionary.pop(-1)
-                                self.last_change.pop(-1)
+                            case 'back':
+                                if len(self.last_change) > 0:
+                                    if self.last_change[-1] == 1:
+                                        if len(self.points) > 0:
+                                            self.points.pop(-1)
+                                    if self.last_change[-1] == 0:
+                                        if len(self.dictionary) > 0:
+                                            self.dictionary.pop(-1)
+                                    self.last_change.pop(-1)
 
                         # Сохранение массива точек
                         if name == 'generate':
                             self.save_points1()
                             self.save_points2()
+                            self.save_models(self.exp)
                             return True
 
                         # Контроль активности кнопок
-                        elif name in self.buttons_active.keys() and not self.pg:
+                        elif name in self.buttons_active.keys() and self.current_page == 'pg2':
 
                             if self.buttons_active[name]:
                                 self.buttons_active[name] = False
@@ -289,10 +417,11 @@ class Main:
                         elif name not in self.buttons_active.keys():
                             if name in self.names:
                                 self.brush = name
-
+                    if self.canvas["rect"].collidepoint(i.pos):
+                        self.last_click = i.pos
                 # Запись новых точек в массивы
-                if (self.canvas['rect'].collidepoint(i.pos) and not (True in self.buttons_active.values()) or
-                        self.pg and self.canvas['rect'].collidepoint(i.pos)):
+                if (self.canvas['rect'].collidepoint(i.pos) and
+                        self.current_page == 'pg1'):
 
                     # Запись с учетом dot-to-dot
                     if self.dot_to_dot:
@@ -310,14 +439,17 @@ class Main:
                         self.last_change.append(1)
 
                 # Запись положения мебели в словари
-                elif self.canvas['rect'].collidepoint(i.pos) and not self.pg:
+                elif self.canvas['rect'].collidepoint(i.pos) and self.current_page == 'pg2':
                     for key in self.buttons_active.keys():
                         if self.buttons_active[key]:
                             self.x, self.y = self.furn_size[key]
-                            self.dictionary.append([key,pg.Rect(i.pos[0]-self.x/2, i.pos[1]-self.y/2, self.x , self.y)])
+                            self.dictionary.append([key,pg.Rect(i.pos[0]-self.x/2,
+                                                                i.pos[1]-self.y/2, self.x , self.y)])
+
                             self.furniture_points.append((i.pos[0] / self.canvas['can'].get_size()[0],
                                         i.pos[1] / self.canvas['can'].get_size()[1], key))
                             self.last_change.append(0)
+
 
 
         # Перебор массива точек
@@ -346,17 +478,47 @@ class Main:
             # Проверка, что точка не одна
             if len(self.points) > 1:
                 # Отрисовка линии
-                pg.draw.line(
-                    self.canvas['can'],
-                    line_color,
-                    (val[0] * self.canvas['can'].get_size()[0],
-                     val[1] * self.canvas['can'].get_size()[1]),
-                    (self.points[(key + 1) % len(self.points)][0] *
-                     self.canvas['can'].get_size()[0],
-                     self.points[(key + 1) % len(self.points)][1] *
-                     self.canvas['can'].get_size()[1]),
-                    tickness
-                )
+                if (key + 1) % len(self.points) != 0:
+                    pg.draw.line(
+                        self.canvas['can'],
+                        line_color,
+                        (val[0] * self.canvas['can'].get_size()[0],
+                         val[1] * self.canvas['can'].get_size()[1]),
+                        (self.points[(key + 1) % len(self.points)][0] *
+                         self.canvas['can'].get_size()[0],
+                         self.points[(key + 1) % len(self.points)][1] *
+                         self.canvas['can'].get_size()[1]),
+                        tickness
+                    )
+
+                # Жесткий костыльб
+                if self.dot_to_dot and self.current_page == 'pg1':
+                    pg.draw.line(self.canvas['can'], line_color,
+                                 (self.points[-1][0] * self.canvas['can'].get_size()[0],
+                                    self.points[-1][1] * self.canvas['can'].get_size()[1]),
+                                                                                self.dot, 2)
+
+                    pg.draw.line(self.canvas['can'], 'black',
+                                 (self.points[0][0] * self.canvas['can'].get_size()[0],
+                                 self.points[0][1] * self.canvas['can'].get_size()[1]),
+                                                                                self.dot, 2)
+                elif self.current_page != 'pg1':
+                    pg.draw.line(self.canvas['can'], line_color,
+                                 (self.points[-1][0] * self.canvas['can'].get_size()[0],
+                                  self.points[-1][1] * self.canvas['can'].get_size()[1]),
+                                 (self.points[0][0] * self.canvas['can'].get_size()[0],
+                                  self.points[0][1] * self.canvas['can'].get_size()[1]), 2)
+
+                else:
+                    pg.draw.line(self.canvas['can'], line_color,
+                                 (self.points[-1][0] * self.canvas['can'].get_size()[0],
+                                self.points[-1][1] * self.canvas['can'].get_size()[1]), self.fin_l, 2)
+
+                    pg.draw.line(self.canvas['can'], 'black',
+                                 (self.points[0][0] * self.canvas['can'].get_size()[0],
+                                self.points[0][1] * self.canvas['can'].get_size()[1]),
+                                                                                self.fin_l, 2)
+
 
         #######################
         # Отрисовка элементов #
@@ -368,12 +530,20 @@ class Main:
         # Отрисовка холста
         self.screen.blit(self.canvas['can'],
                          self.canvas['rect'])
-        if self.pg:
-            pg.draw.rect(self.screen, 'yellow', self.buttons['pg1'], 4)
-            pg.draw.rect(self.screen, 'white', self.buttons['pg2'], 4)
-        else:
-            pg.draw.rect(self.screen, 'yellow', self.buttons['pg2'], 4)
-            pg.draw.rect(self.screen, 'white', self.buttons['pg1'], 4)
+
+        for name, button in self.buttons.items():
+            if name[:2] == 'pg':
+                if name == self.current_page:
+                    pg.draw.rect(self.screen, 'yellow', self.buttons[name], 4)
+                else:
+                    pg.draw.rect(self.screen, 'white', self.buttons[name], 4)
+
+        # if self.current_page == 'pg1':
+        #     pg.draw.rect(self.screen, 'yellow', self.buttons['pg1'], 4)
+        #     pg.draw.rect(self.screen, 'white', self.buttons['pg2'], 4)
+        # else:
+        #     pg.draw.rect(self.screen, 'yellow', self.buttons['pg2'], 4)
+        #     pg.draw.rect(self.screen, 'white', self.buttons['pg1'], 4)
 
         if self.dot_to_dot:
             pg.draw.rect(self.screen, 'yellow', self.buttons['dtd'], 0)
@@ -404,93 +574,23 @@ class Main:
         Main.draw_text(self, self.screen, '––>', 60, self.width - 170, 605)
         Main.draw_text(self, self.screen, 'Back', 40, self.width - 175, 465)
         Main.draw_text(self, self.screen, 'Dot-to-dot', 40, self.width - 125, 365)
+
         Main.draw_text(self, self.screen, 'Furniture', 40, self.width - 175, 65)
         Main.draw_text(self, self.screen, 'Instruments', 40, self.width - 175, 165)
+        Main.draw_text(self, self.screen, 'Export settings', 40, self.width - 175, 265)
+
 
         pg.draw.rect(self.screen, 'white', pg.Rect(1090, 350, 70, 70), 4)
         pg.draw.rect(self.screen, 'white', pg.Rect(1090, 450, 70, 70), 4)
 
-        # Элементы на первой вкладке
-        if self.pg:
-            # Кнопки
-            pg.draw.rect(self.screen, 'white', self.buttons['clear'], 0)
-            pg.draw.rect(self.screen, 'green', self.buttons['door'], 0)
-            pg.draw.rect(self.screen, self.colors['not_hovered'], self.buttons['wall'], 0)
-            pg.draw.rect(self.screen, 'red', self.buttons['window'], 0)
-            pg.draw.rect(self.screen, self.colors['hovered'], self.buttons['empty'], 0)
+        pg.draw.line(self.canvas['can'], 'black', self.last_click, self.fin_l, 2)
 
-            # Изображения
-            self.screen.blit(self.clear, (680, 10))
-            self.screen.blit(self.wall, (690, 150))
-            self.screen.blit(self.window, (685, 295))
-            self.screen.blit(self.door, (690, 450))
-            self.screen.blit(self.empty, (692, 602))
-
-            self.n = 20
-            for square in range(5):
-                pg.draw.rect(self.screen, 'white', pg.Rect(690, self.n, 70, 70), 4)
-                if square < 1:
-                    self.n += 130
-                else:
-                    self.n += 150
-
-            # Активность кнопок стен
-            if self.brush in self.names:
-                pg.draw.rect(self.screen, 'yellow', self.buttons[self.brush], 4)
-            else:
-                pg.draw.rect(self.screen, 'yellow', self.buttons['wall'], 4)
-
-            # Текст
-            Main.draw_text(self, self.screen, 'Clear all', 40, self.width - 525, 33)
-            Main.draw_text(self, self.screen, 'Wall', 40, self.width - 525, 165)
-            Main.draw_text(self, self.screen, 'Window', 40, self.width - 525, 315)
-            Main.draw_text(self, self.screen, 'Door', 40, self.width - 525, 463)
-            Main.draw_text(self, self.screen, 'Empty', 40, self.width - 525, 615)
-
-
-
-
-        # Элементы на второй вкладке
-        else:
-            # Текст
-            Main.draw_text(self, self.screen, 'Chair', 40, self.width - 525, 33)
-            Main.draw_text(self, self.screen, 'Table', 40, self.width - 525, 165)
-            Main.draw_text(self, self.screen, 'Nightstand', 40, self.width - 525, 315)
-            Main.draw_text(self, self.screen, 'Bed', 40, self.width - 525, 463)
-            Main.draw_text(self, self.screen, 'Closet', 40, self.width - 525, 613)
-
-
-
-            # Кнопки и их активность
-            for name in self.buttons:
-                if name in self.buttons_active.keys():
-                    if self.buttons_active[name]:
-                        pg.draw.rect(self.screen, 'yellow', self.buttons[name], 0)
-                    else:
-                        pg.draw.rect(self.screen, 'pink', self.buttons[name], 0)
-
-            # Мебель на холсте
-            for rect, active in self.buttons_active.items():
-                if active and not self.pg:
-                    self.x, self.y = self.furn_size[rect]
-                    pg.draw.rect(self.screen, self.furn_colors[rect],
-                                 pg.Rect(pg.mouse.get_pos()[0]-self.x/2, pg.mouse.get_pos()[1]-self.y/2,
-                                         self.x, self.y), 3)
-
-            self.screen.blit(self.chair, (688, 19))
-            self.screen.blit(self.table, (691.5, 143))
-            self.screen.blit(self.night, (692, 303))
-            self.screen.blit(self.bed, (677, 435))
-            self.screen.blit(self.closet, (695, 605))
-
-            self.n = 20
-            for square in range(5):
-                pg.draw.rect(self.screen, 'white', pg.Rect(690, self.n, 70, 70), 4)
-                if square < 1:
-                    self.n += 130
-                else:
-                    self.n += 150
-
+        if self.current_page == 'pg1':
+            self.page_1()
+        elif self.current_page == 'pg2':
+            self.page_2()
+        elif self.current_page == 'pg3':
+            self.page_3()
 
         # Мебель на холсте
         for name, rect in self.dictionary:
@@ -546,6 +646,13 @@ class Main:
 
         return surf
 
+    def save_models(self, lst):
+        arr = []
+        for name, tick in lst.items():
+            if tick:
+                arr.append(name)
+        with open('save_models.csv', 'w', encoding='utf-8') as file:
+            file.write(','.join([str(model) for model in arr]))
 
 
     def save_points1(self):
